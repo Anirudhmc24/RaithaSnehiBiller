@@ -1,10 +1,12 @@
 # config/settings.py
 
+import os
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SHOP CONSTANTS  — edit these once
 # ─────────────────────────────────────────────────────────────────────────────
-DB_PATH         = "slv_traders.db"
-GST_DB_PATH     = "gst_data.db"
+DB_PATH         = os.path.abspath(os.path.join(os.getcwd(), "slv_traders.db"))
+GST_DB_PATH     = os.path.abspath(os.path.join(os.getcwd(), "gst_data.db"))
 SHOP_NAME       = "Sri Lakshmi Venkateshwara Traders"
 SHOP_ADDRESS1   = "#20, Near Bank Of Baroda"
 SHOP_ADDRESS2   = "Mysore Bangalore Expressway, Thubinakere"
