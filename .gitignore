@@ -1,4 +1,20 @@
-﻿venv
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Database files (user-specific data)
 *.db
-__pycache__
+
+# Python cache
+__pycache__/
 *.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Archives
+*.7z
+*.zip

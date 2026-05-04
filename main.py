@@ -115,6 +115,7 @@ with st.sidebar:
             "🧾 New Bill",
             "🔍 Search Product",
             "📋 GST Registers",
+            "🏪 Shop Layout",
             "📊 Reports",
         ]
     )
@@ -177,17 +178,18 @@ elif page == "📋 GST Registers":
 elif page == "🏪 Shop Layout":
     from ui.shop_layout import page_shop_layout
     page_shop_layout()
-    with st.sidebar:
-        st.markdown("---")
-        st.markdown("**Gemini API Key** (AI bill scan)")
-        _gkey = st.text_input("", value=st.session_state.get("gemini_key", ""),
-                              type="password", placeholder="AIza…",
-                              label_visibility="collapsed", key="gemini_key_sb")
-        if _gkey:
-            st.session_state.gemini_key = _gkey
-        st.caption("✓ Key set" if st.session_state.get("gemini_key") else "Get free key: aistudio.google.com")
 
 elif page == "📊 Reports":
     from ui.reports import page_reports
     page_reports()
+
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("**Gemini API Key** (AI bill scan)")
+    _gkey = st.text_input("", value=st.session_state.get("gemini_key", ""),
+                          type="password", placeholder="AIza…",
+                          label_visibility="collapsed", key="gemini_key_sb")
+    if _gkey:
+        st.session_state.gemini_key = _gkey
+    st.caption("✓ Key set" if st.session_state.get("gemini_key") else "Get free key: aistudio.google.com")
 
