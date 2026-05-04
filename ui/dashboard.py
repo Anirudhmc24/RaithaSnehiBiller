@@ -57,3 +57,11 @@ def page_dashboard():
 
     if not any_ready:
         st.info("No months have purchase bills yet. Click a month tab at the top to get started.")
+
+    st.markdown("---")
+    st.markdown("### Advanced Options")
+    if st.button("➕ Create Next Month", help="Generate the tab and configuration for the next sequential month."):
+        from utils.helpers import add_next_month
+        add_next_month()
+        st.success("Next month created successfully! Streamlit will reload automatically.")
+        st.rerun()
