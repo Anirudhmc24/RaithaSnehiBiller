@@ -168,10 +168,15 @@ elif page == "📋 GST Registers":
         from ui.dashboard import page_dashboard
         page_dashboard()
     elif _sub in dict(MONTHS):
+        from ui.gst_registers import page_month
         page_month(_sub)
     else:
         from ui.dashboard import page_dashboard
         page_dashboard()
+
+elif page == "🏪 Shop Layout":
+    from ui.shop_layout import page_shop_layout
+    page_shop_layout()
     with st.sidebar:
         st.markdown("---")
         st.markdown("**Gemini API Key** (AI bill scan)")

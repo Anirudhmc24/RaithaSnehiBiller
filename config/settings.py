@@ -80,4 +80,5 @@ NAV_PAGES = [
     ("📊", "Reports"),
     ("🔍", "Search Product"),
     ("📋", "GST Registers"),
+    ("🏪", "Shop Layout"),
 ]

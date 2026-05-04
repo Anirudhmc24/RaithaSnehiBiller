@@ -66,7 +66,7 @@ def page_scanner():
                     <span class="detail-pill">GST: {gst_pct:.0f}%</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-pill">📍 {product['section']} › {product['row_no']} › Slot <b>{product['slot']}</b></span>
+                    <span class="detail-pill">📍 {product['location_path']}</span>
                     <span class="detail-pill">{stock_color} Stock: <b>{product['quantity']} {product['unit']}</b></span>
                     <span class="detail-pill">💰 MRP: ₹{product['mrp']:.2f}/{product['unit']}</span>
                     <span class="detail-pill">🏭 Cost: ₹{product['cost_price']:.2f}</span>
@@ -161,9 +161,12 @@ def page_scanner():
                 fc1, fc2 = st.columns(2)
                 np_name    = fc1.text_input("Product Name *", placeholder="e.g. Urea (46% N)")
                 np_hsn     = fc2.text_input("HSN Code *", placeholder="e.g. 31021010", help="Find HSN on your purchase bill or GST portal")
-                np_section = fc1.selectbox("Section", ["Chemical Section","Organic Section","Micro-Nutrient","Mineral Section","Pesticide Section","Other"])
-                np_row     = fc2.text_input("Row No", placeholder="e.g. Row 1")
-                np_slot    = fc1.text_input("Slot",   placeholder="e.g. AA")
+                
+                from ui.components import render_location_selector
+                from database.db_main import get_shop_layout
+                layout_tree = get_shop_layout()
+                np_location_path = render_location_selector(layout_tree, "scan_new")
+                
                 np_unit    = fc2.selectbox("Unit", ["Kg","Bag","Litre","Gram","Nos"])
                 np_qty     = fc1.number_input("Opening Stock Qty",    min_value=0.0, step=0.5)
                 np_mrp     = fc2.number_input("MRP per Unit (₹)",     min_value=0.0, step=0.5)
@@ -187,15 +190,15 @@ def page_scanner():
 
                 st.markdown("---")
                 if st.form_submit_button("✅ Register Product & Save to Inventory", type="primary"):
-                    if np_name and np_hsn and np_row and np_slot:
+                    if np_name and np_hsn and np_location_path:
                         try:
                             conn.execute("""
                                 INSERT INTO inventory
-                                    (qr_code,name,hsn_code,section,row_no,slot,
+                                    (qr_code,name,hsn_code,location_path,section,row_no,slot,
                                      unit,quantity,mrp,cost_price,gst_rate)
-                                VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                            """, (barcode, np_name, np_hsn, np_section,
-                                  np_row, np_slot, np_unit, np_qty,
+                                VALUES (?,?,?,?,'','','',?,?,?,?,?)
+                            """, (barcode, np_name, np_hsn, np_location_path,
+                                  np_unit, np_qty,
                                   np_mrp, np_cost, GST_RATES[np_gst]))
                             conn.commit()
 
@@ -212,7 +215,7 @@ def page_scanner():
                             | **Product Name** | {np_name} |
                             | **QR Code** | `{barcode}` |
                             | **HSN Code** | {np_hsn} |
-                            | **Location** | {np_section} › {np_row} › Slot {np_slot} |
+                            | **Location** | {np_location_path} |
                             | **Opening Stock** | {np_qty} {np_unit} |
                             | **MRP** | ₹ {np_mrp:.2f} / {np_unit} |
                             | **Cost Price** | ₹ {np_cost:.2f} / {np_unit} |
@@ -234,14 +237,14 @@ def page_scanner():
     import pandas as pd
     history = conn.execute("""
         SELECT br.qr_code, br.product_name, br.first_scanned, br.scan_count,
-               i.section, i.row_no, i.slot, i.quantity, i.unit
+               i.location_path, i.quantity, i.unit
         FROM qr_registry br
         LEFT JOIN inventory i ON br.product_id = i.id
         ORDER BY br.first_scanned DESC LIMIT 20
     """).fetchall()
     if history:
         df = pd.DataFrame([dict(r) for r in history])
-        df.columns = ["QR Code","Product","First Scanned","Times Scanned","Section","Row","Slot","Current Qty","Unit"]
+        df.columns = ["QR Code","Product","First Scanned","Times Scanned","Location","Current Qty","Unit"]
         st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.info("No scan history yet. Start scanning products!")

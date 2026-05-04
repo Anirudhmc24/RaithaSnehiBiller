@@ -14,7 +14,7 @@ def page_inventory():
     with tab1:
         import pandas as pd
         products = conn.execute(
-            "SELECT * FROM inventory ORDER BY section,row_no,slot"
+            "SELECT * FROM inventory ORDER BY location_path"
         ).fetchall()
         if products:
             rows = []
@@ -25,9 +25,7 @@ def page_inventory():
                     "Name":     p["name"],
                     "HSN":      p["hsn_code"],
                     "GST":      f"{(p['gst_rate'] or 0)*100:.0f}%",
-                    "Section":  p["section"],
-                    "Row":      p["row_no"],
-                    "Slot":     p["slot"],
+                    "Location": p["location_path"] or "—",
                     "Qty":      p["quantity"],
                     "Unit":     p["unit"],
                     "MRP(₹)":   p["mrp"],
@@ -65,11 +63,11 @@ def page_inventory():
             p_name    = c2.text_input("Product Name *", value=auto_name)
             
             p_hsn     = c1.text_input("HSN Code *", value=auto_hsn)
-            p_section = c2.selectbox("Section", [
-                "Chemical Section","Organic Section","Micro-Nutrient",
-                "Mineral Section","Pesticide Section","Other"])
-            p_row  = c1.text_input("Row No (e.g. Row 1)")
-            p_slot = c2.text_input("Slot (e.g. AA)")
+            
+            from ui.components import render_location_selector
+            from database.db_main import get_shop_layout
+            layout_tree = get_shop_layout()
+            p_location_path = render_location_selector(layout_tree, "inv_new")
             p_unit = c1.selectbox("Unit", ["Kg","Bag","Litre","Gram","Nos"])
             p_qty  = c2.number_input("Opening Stock Qty", min_value=0.0, step=0.5)
             p_mrp  = c1.number_input("MRP per Unit (₹)", min_value=0.0, step=0.5)
@@ -78,15 +76,15 @@ def page_inventory():
                           index=list(GST_RATES.keys()).index(auto_gst))
 
             if st.form_submit_button("➕ Add Product", type="primary"):
-                if p_name and p_hsn and p_row and p_slot:
+                if p_name and p_hsn and p_location_path:
                     try:
                         conn.execute("""
                             INSERT INTO inventory
-                                (qr_code,name,hsn_code,section,row_no,slot,
+                                (qr_code,name,hsn_code,location_path,section,row_no,slot,
                                  unit,quantity,mrp,cost_price,gst_rate)
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                        """, (p_barcode.strip() or None, p_name, p_hsn, p_section,
-                              p_row, p_slot, p_unit, p_qty, p_mrp, p_cost,
+                            VALUES (?,?,?,?,'','','',?,?,?,?,?)
+                        """, (p_barcode.strip() or None, p_name, p_hsn, p_location_path,
+                              p_unit, p_qty, p_mrp, p_cost,
                               GST_RATES[p_gst_label]))
                         conn.commit()
                         if p_barcode.strip():

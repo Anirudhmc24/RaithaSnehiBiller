@@ -35,7 +35,20 @@ def init_db():
         c.execute("ALTER TABLE inventory ADD COLUMN gst_rate REAL DEFAULT 0.05")
     if "qr_code" not in existing:
         c.execute("ALTER TABLE inventory ADD COLUMN qr_code TEXT")
+    if "location_path" not in existing:
+        c.execute("ALTER TABLE inventory ADD COLUMN location_path TEXT DEFAULT ''")
+        c.execute("UPDATE inventory SET location_path = section || ' > ' || row_no || ' > ' || slot WHERE location_path = ''")
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_inv_qr ON inventory(qr_code) WHERE qr_code IS NOT NULL")
+
+    # ── Shop Config ────────────────────────────────────────────────────────
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS shop_config (
+            key TEXT PRIMARY KEY,
+            value_json TEXT
+        )
+    """)
+    # Seed default empty tree
+    c.execute("INSERT OR IGNORE INTO shop_config (key, value_json) VALUES ('layout_tree', '{}')")
 
     # ── Invoices ───────────────────────────────────────────────────────────
     c.execute("""
@@ -164,3 +177,19 @@ def generate_invoice_no():
     conn.close()
     seq = int(row["invoice_no"].split("-")[-1]) + 1 if row else 1
     return f"{prefix}{seq:04d}"
+
+import json
+def get_shop_layout():
+    conn = get_conn()
+    row = conn.execute("SELECT value_json FROM shop_config WHERE key='layout_tree'").fetchone()
+    conn.close()
+    if row:
+        return json.loads(row["value_json"])
+    return {}
+
+def save_shop_layout(layout_dict):
+    conn = get_conn()
+    conn.execute("INSERT OR REPLACE INTO shop_config (key, value_json) VALUES (?,?)", 
+                 ('layout_tree', json.dumps(layout_dict)))
+    conn.commit()
+    conn.close()
