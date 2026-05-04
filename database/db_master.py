@@ -56,7 +56,29 @@ def db_master_init():
                 ("Paraquat Dichloride 24% SL", "38089390", 0.18, "Herbicide"),
                 ("Pretilachlor 50% EC", "38089390", 0.18, "Herbicide"),
                 ("Pendimethalin 30% EC", "38089390", 0.18, "Herbicide"),
+                # Rallis India Insecticides (12% or 18%)
+                ("Rallis Taffy", "38081099", 0.18, "Pesticide"),
+                ("Rallis Tatamida", "38081099", 0.18, "Pesticide"),
+                ("Rallis Zygant", "38081099", 0.18, "Pesticide"),
+                ("Rallis Asataf (Acephate)", "38081099", 0.18, "Pesticide"),
+                ("Rallis Applaud (Buprofezin)", "38081099", 0.18, "Pesticide"),
+                ("Rallis Nagata (Ethion + Cypermethrin)", "38081099", 0.18, "Pesticide"),
                 
+                # Rallis India Fungicides (18%)
+                ("Rallis Copper Oxy Chloride", "38089290", 0.18, "Fungicide"),
+                ("Rallis Metalaxyl", "38089290", 0.18, "Fungicide"),
+                ("Rallis Kresoxim-methyl", "38089290", 0.18, "Fungicide"),
+                ("Rallis Tebuconazole", "38089290", 0.18, "Fungicide"),
+
+                # Rallis India Herbicides (18%)
+                ("Rallis Metribuzin", "38089390", 0.18, "Herbicide"),
+                
+                # Rallis India Plant Growth Nutrients (18%)
+                ("TATA Bahaar", "31059090", 0.18, "Plant Growth Nutrient"),
+                ("Rallis Surplus", "31059090", 0.18, "Plant Growth Nutrient"),
+                ("Rallis Aquafert", "31059090", 0.18, "Plant Growth Nutrient"),
+                ("Rallis NAYAZINC", "28330300", 0.18, "Micronutrient"),
+
                 # Organic / Exempt (0%)
                 ("Organic Compost", "31010010", 0.00, "Organic"),
                 ("Neem Cake", "31010090", 0.00, "Organic"),
