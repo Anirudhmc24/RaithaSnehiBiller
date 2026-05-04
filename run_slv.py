@@ -1,7 +1,6 @@
 """
 SLV Traders — Standalone Launcher
-Opens the Streamlit app in a native-feeling desktop window
-using Edge/Chrome's --app mode (no URL bar, no tabs).
+Runs Streamlit in-process and opens a native-feeling desktop window.
 """
 import os
 import sys
@@ -35,15 +34,10 @@ def wait_for_server(port, timeout=30):
     return False
 
 def find_browser_exe():
-    """
-    Try to locate Edge or Chrome on Windows.
-    Returns the path if found, else None.
-    """
+    """Try to locate Edge or Chrome on Windows."""
     candidates = [
-        # Microsoft Edge (preferred — present on all Win10/11)
         os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
         os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
-        # Google Chrome
         os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
         os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
         os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
@@ -54,14 +48,9 @@ def find_browser_exe():
     return None
 
 def open_app_window(port):
-    """
-    Open the app in a native-feeling window.
-    Uses --app flag on Edge/Chrome to hide the URL bar and tabs.
-    Falls back to the default browser if neither is found.
-    """
+    """Open the app in a native-feeling window (no URL bar, no tabs)."""
     url = f"http://localhost:{port}"
     browser_exe = find_browser_exe()
-
     if browser_exe:
         subprocess.Popen([
             browser_exe,
@@ -70,10 +59,22 @@ def open_app_window(port):
             f"--window-size=1280,800",
         ])
     else:
-        # Fallback: open in default browser
         webbrowser.open(url)
 
+def open_browser_when_ready(port):
+    """Background thread: wait for server, then open the window."""
+    print("[*] Waiting for server to start...")
+    if wait_for_server(port):
+        print(f"[✓] Server ready! Opening application window...")
+        open_app_window(port)
+    else:
+        print(f"[!] Server did not start in time. Open manually: http://localhost:{port}")
+
 def main():
+    # Prevent multiprocessing fork-bomb in frozen exe
+    import multiprocessing
+    multiprocessing.freeze_support()
+
     port = find_free_port()
     script_path = resolve_path("main.py")
 
@@ -85,35 +86,21 @@ def main():
     print("║   Close this window to stop the application.     ║")
     print("╚══════════════════════════════════════════════════╝")
 
-    # Launch Streamlit server in the background
-    env = os.environ.copy()
-    server_proc = subprocess.Popen(
-        [
-            sys.executable, "-m", "streamlit", "run", script_path,
-            "--global.developmentMode=false",
-            f"--server.port={port}",
-            "--server.headless=true",
-            "--browser.gatherUsageStats=false",
-        ],
-        env=env,
-    )
+    # Launch browser-opener in a background thread
+    t = threading.Thread(target=open_browser_when_ready, args=(port,), daemon=True)
+    t.start()
 
-    # Wait for server to be ready, then open window
-    print("[*] Waiting for server to start...")
-    if wait_for_server(port):
-        print(f"[✓] Server ready! Opening application window...")
-        open_app_window(port)
-    else:
-        print("[!] Server did not start in time. Please open manually:")
-        print(f"    http://localhost:{port}")
-
-    # Keep alive until server exits (user closes the console)
-    try:
-        server_proc.wait()
-    except KeyboardInterrupt:
-        print("\n[*] Shutting down...")
-        server_proc.terminate()
-        server_proc.wait()
+    # Run Streamlit IN-PROCESS (not as a subprocess)
+    # This avoids the sys.executable fork-bomb issue with frozen exes
+    from streamlit.web import bootstrap
+    flag_options = {
+        "server.port": port,
+        "server.headless": True,
+        "global.developmentMode": False,
+        "browser.gatherUsageStats": False,
+        "server.fileWatcherType": "none",  # no file watcher in frozen exe
+    }
+    bootstrap.run(script_path, False, [], flag_options)
 
 if __name__ == "__main__":
     main()
