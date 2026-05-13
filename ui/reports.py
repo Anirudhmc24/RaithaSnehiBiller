@@ -1,36 +1,60 @@
 import streamlit as st
 import datetime
 import pandas as pd
+import json
 from database.db_main import get_conn
-from services.excel_generator import generate_excel_report
+from services.excel_generator import generate_excel_report, make_sales_xlsx, make_purchase_xlsx
+from config.settings import MONTHS, MON_ABBR, GSTIN
+from utils.helpers import fmtc, parse_mk
+from services.gst_calculator import get_voucher_start, build_daily_sales
+from services.billing_service import bills_summary, derive_sales_totals, ok_bills, make_gstr1_json
 
 def page_reports():
-    st.subheader("📊 CA-Ready Sales Reports — GSTR-1")
-    conn = get_conn()
-    today      = datetime.date.today()
-    week_start = today - datetime.timedelta(days=today.weekday())
+    st.markdown("## 📊 Reports & Documents")
+    st.caption("Download GST documents and view invoice history.")
+    
+    st.markdown("---")
+    st.markdown("### 📥 Download GST Documents")
+    st.caption("Once purchase bills are entered for a month, download buttons appear below.")
 
-    daily_total   = conn.execute(
-        "SELECT COALESCE(SUM(total_amount),0) FROM invoices WHERE DATE(invoice_date)=?",
-        (today.isoformat(),)).fetchone()[0]
-    weekly_total  = conn.execute(
-        "SELECT COALESCE(SUM(total_amount),0) FROM invoices WHERE DATE(invoice_date) BETWEEN ? AND ?",
-        (week_start.isoformat(), (week_start + datetime.timedelta(days=6)).isoformat())).fetchone()[0]
-    monthly_total = conn.execute(
-        "SELECT COALESCE(SUM(total_amount),0) FROM invoices WHERE strftime('%Y-%m',invoice_date)=?",
-        (today.strftime("%Y-%m"),)).fetchone()[0]
-    inv_count     = conn.execute("SELECT COUNT(*) FROM invoices").fetchone()[0]
+    any_ready=False
+    for mk,lbl in MONTHS:
+        bs=bills_summary(mk)
+        if bs["count"]==0: continue
+        any_ready=True
+        st.markdown(f"**{lbl}** — {bs['count']} purchase bills · Est. sales {fmtc(sum(derive_sales_totals(mk).values()))}")
+        c1,c2,c3=st.columns(3)
+        start_vno=get_voucher_start(mk)
+        overrides = st.session_state.sales_override.get(mk, {})
+        totals = derive_sales_totals(mk)
+        entries = build_daily_sales(mk, totals, overrides)
+        purchases=ok_bills(mk)
+        sales_xls,sales_g,last_vno=make_sales_xlsx(mk,entries,start_vno)
+        pur_xls,_=make_purchase_xlsx(mk,purchases)
+        gstr1=make_gstr1_json(mk,sales_g,start_vno,last_vno,last_vno-start_vno+1)
+        m2,y2=parse_mk(mk); mname=lbl.replace(" ","_")
+        c1.download_button("⬇ Sales Register .xlsx",data=sales_xls,
+            file_name=f"Sales_Register_{mname}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key=f"dd_s_{mk}")
+        c2.download_button("⬇ Purchase Register .xlsx",data=pur_xls,
+            file_name=f"Purchase_Register_{mname}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key=f"dd_p_{mk}")
+        c3.download_button(f"⬇ GSTR-1 JSON",data=json.dumps(gstr1,indent=2).encode(),
+            file_name=f"{GSTIN}_GSTR1_{MON_ABBR[m2]}{y2}.json",
+            mime="application/json",key=f"dd_g_{mk}")
+        st.markdown("")
 
-    mc1,mc2,mc3,mc4 = st.columns(4)
-    mc1.metric("Today",          f"₹ {daily_total:,.2f}")
-    mc2.metric("This Week",      f"₹ {weekly_total:,.2f}")
-    mc3.metric("This Month",     f"₹ {monthly_total:,.2f}")
-    mc4.metric("Total Invoices", inv_count)
+    if not any_ready:
+        st.info("No months have purchase bills yet. Go to GST Registers to enter data.")
 
     st.markdown("---")
-    if st.button("📥 Generate GSTR-1 Excel Report", type="primary"):
+    st.markdown("### 📥 Generic Sales Excel")
+    if st.button("Generate Generic GSTR-1 Excel Report", type="secondary"):
         with st.spinner("Generating..."):
             excel_bytes = generate_excel_report()
+        today = datetime.date.today()
         st.download_button(
             "⬇️ Download Excel (Daily | Weekly | Monthly)",
             data=excel_bytes,
@@ -41,6 +65,7 @@ def page_reports():
 
     st.markdown("---")
     st.markdown("#### 🗂️ Invoice History")
+    conn = get_conn()
     search_inv = st.text_input("🔍 Search by Invoice No or Customer")
     q  = """SELECT invoice_no,invoice_date,customer_name,
                    taxable_value,cgst_amount,sgst_amount,total_amount

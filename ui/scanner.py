@@ -9,7 +9,7 @@ def page_scanner():
 
     st.markdown("""
     <div style="background:#e3f2fd;border-left:5px solid #1565c0;
-                padding:12px 16px;border-radius:8px;margin-bottom:16px;">
+                padding:12px 16px;border-radius:8px;margin-bottom:16px;color:#0d47a1;">
         <b>📡 How to use your USB QR Code Scanner:</b><br>
         1. Plug the USB QR scanner into your PC — it works like a keyboard, no drivers needed<br>
         2. Select the <b>mode</b> below (Receive Stock or Billing)<br>

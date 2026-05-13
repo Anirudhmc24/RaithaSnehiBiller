@@ -57,6 +57,9 @@ div[data-testid="stMetricValue"] {
     margin-bottom: 12px;
     color: #1a3c5e;
 }
+.scan-found, .scan-new {
+    color: #2c3e50; /* Force dark text to contrast with the light backgrounds */
+}
 .detail-row {
     display: flex;
     flex-wrap: wrap;
@@ -71,6 +74,26 @@ div[data-testid="stMetricValue"] {
     font-size: 0.9rem;
     color: #424242;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Form Visibility Fix for Add Product & other forms */
+div[data-testid="stForm"] {
+    background-color: var(--secondary-background-color) !important;
+    border: 1px solid var(--faded-text-40) !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+div[data-testid="stForm"] label, div[data-testid="stForm"] .st-emotion-cache-10trblm {
+    font-weight: 600 !important;
+    color: var(--text-color) !important;
+}
+
+/* Fix input text and background visibility inside forms */
+div[data-testid="stForm"] input, div[data-testid="stForm"] select, div[data-testid="stForm"] div[data-baseweb="select"] {
+    background-color: var(--background-color) !important;
+    color: var(--text-color) !important;
 }
 </style>
 """, unsafe_allow_html=True)

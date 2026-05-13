@@ -4,25 +4,44 @@ import datetime
 from config.settings import MONTHS, MON_ABBR, GSTIN, LOW_STOCK_ALERT
 from utils.helpers import fmtc, parse_mk, r2, ld
 from services.gst_calculator import get_voucher_start, get_purchase_voucher_start, build_daily_sales, distribute_target_sales, calculate_gst
-from services.billing_service import bills_summary, derive_sales_totals, ok_bills, make_gstr1_json
+from services.billing_service import bills_summary, derive_sales_totals, ok_bills, make_gstr1_json, FILED_HSN, aggregate_hsn_from_bills
 from services.excel_generator import make_sales_xlsx, make_purchase_xlsx
 from services.ai_extractor import extract_bill_ai
-from database.db_gst import db_save_bills, db_save_override, db_delete_overrides, db_load_target, db_save_hsn, db_load_bills, db_load_overrides
+from database.db_gst import db_save_bills, db_save_override, db_delete_overrides, db_load_target, db_save_hsn, db_load_bills, db_load_overrides, db_load_suppliers, db_save_supplier, db_load_hsn
 from database.db_main import get_conn
 
 def gst_ss_init():
-    for k in ["gst_bills","gst_overrides","gst_suppliers","hsn_entries"]:
+    # 1. Initialize core dicts if missing
+    for k in ["gst_bills", "gst_overrides", "hsn_entries"]:
         if k not in st.session_state:
             st.session_state[k] = {}
-            for m,_ in MONTHS:
+        
+        # 2. Ensure ALL months in MONTHS are present (fixes KeyError after adding next month)
+        for m, _ in MONTHS:
+            if m not in st.session_state[k]:
                 if k == "gst_bills":
                     st.session_state[k][m] = db_load_bills(m)
                 elif k == "gst_overrides":
                     st.session_state[k][m] = db_load_overrides(m)
-                else:
-                    st.session_state[k][m] = [] if k != "gst_overrides" else {}
+                elif k == "hsn_entries":
+                    from_db = db_load_hsn(m)
+                    if from_db:
+                        st.session_state[k][m] = from_db
+                    elif m in FILED_HSN:
+                        # Seed pre-filed months from the hardcoded table
+                        st.session_state[k][m] = list(FILED_HSN[m])
+                    else:
+                        st.session_state[k][m] = []
+
+    # 3. Suppliers (Flat Dictionary, not month-keyed)
+    if "gst_suppliers" not in st.session_state:
+        st.session_state["gst_suppliers"] = db_load_suppliers()
+
+    # 4. Miscellaneous keys
     if "gst_sub_page" not in st.session_state:
         st.session_state.gst_sub_page = "dashboard"
+    if "gemini_key" not in st.session_state:
+        st.session_state.gemini_key = ""
 
 def supplier_selectbox(key_prefix, current_name="", current_gstin=""):
     """Plain text inputs — type supplier name and GSTIN freely."""
@@ -97,8 +116,8 @@ def bill_fields(bill, kp):
 def page_month(mk):
     lbl=dict(MONTHS).get(mk,mk); m,y=parse_mk(mk)
     st.markdown(f"## 📅 {lbl}")
-    tab_pur,tab_sales,tab_docs=st.tabs(
-        ["📥 Purchase Bills","📊 Sales (derived)","📤 Download Documents"])
+    tab_pur,tab_sales,tab_hsn,tab_docs=st.tabs(
+        ["📥 Purchase Bills","📊 Sales (derived)","🔢 HSN Summary","📤 Download Documents"])
 
     # ── TAB 1: PURCHASE BILLS ─────────────────────────────────────────────────
     with tab_pur:
@@ -204,6 +223,7 @@ def page_month(mk):
                     if p.get("supplier") and p.get("gstin"):
                         if p["supplier"] not in st.session_state.suppliers:
                             st.session_state.suppliers[p["supplier"]] = p["gstin"]
+                            db_save_supplier(p["supplier"], p["gstin"])
                     for _k in [k for k in st.session_state if k.endswith("_nn_val") or k.endswith("_ng_val")]:
                         del st.session_state[_k]
                     st.session_state.bills[mk].append(p)
@@ -215,7 +235,7 @@ def page_month(mk):
 
         st.markdown("---")
         st.markdown("### 📷 Scan from photos (Gemini AI)")
-        if not st.session_state.gemini_key:
+        if not st.session_state.get("gemini_key"):
             st.warning("Enter Gemini API key in sidebar to use AI scanning.")
         else:
             uploaded=st.file_uploader("Upload bill photos — multiple OK",
@@ -278,12 +298,16 @@ def page_month(mk):
             st.markdown("**Edit or remove a bill:**")
             to_del   = None
             to_save  = None
+            to_hsn_add = None   # (bill_idx, item_dict)
+            to_hsn_del = None   # (bill_idx, item_idx)
             for idx, bill in enumerate(st.session_state.bills[mk]):
                 if bill.get("status") != "ok": continue
                 src_icon = "✏️" if bill.get("source") == "manual" else "🤖"
+                hsn_count = len(bill.get("hsn_items") or [])
+                hsn_badge = f" · 📦 {hsn_count} HSN item{'s' if hsn_count!=1 else ''}" if hsn_count else ""
                 lbl2 = (f"{src_icon} #{idx+1} · **{bill.get('supplier','?')}** "
                     f"· {bill.get('invno','?')} · {bill.get('inv_date','?')} "
-                    f"· {fmtc(bill.get('gross',0))}")
+                    f"· {fmtc(bill.get('gross',0))}{hsn_badge}")
                 with st.expander(lbl2, expanded=False):
                     updated = bill_fields(bill, f"ef{mk}{idx}")
                     bc1, bc2 = st.columns(2)
@@ -291,6 +315,72 @@ def page_month(mk):
                         to_save = (idx, updated)
                     if bc2.button("🗑  Remove this bill", key=f"del{mk}{idx}", use_container_width=True):
                         to_del = idx
+
+                    # ── HSN LINE ITEMS ──────────────────────────────────
+                    st.markdown("---")
+                    st.markdown("📦 **HSN Line Items** — enter product-wise HSN details from this invoice")
+                    cur_items = list(bill.get("hsn_items") or [])
+
+                    if cur_items:
+                        item_tbl = [{
+                            "#":        i+1,
+                            "HSN Code": it.get("hsn_sc",""),
+                            "UQC":      it.get("uqc",""),
+                            "Qty":      it.get("qty",0),
+                            "Rate %":   it.get("rt",0),
+                            "Taxable":  fmtc(it.get("txval",0)),
+                            "CGST":     fmtc(it.get("camt",0)),
+                            "SGST":     fmtc(it.get("samt",0)),
+                        } for i, it in enumerate(cur_items)]
+                        st.dataframe(item_tbl, use_container_width=True, hide_index=True)
+                        for ii, it in enumerate(cur_items):
+                            if st.button(
+                                f"🗑 Remove #{ii+1} · {it.get('hsn_sc','')} · {it.get('uqc','')} · @{it.get('rt',0)}%",
+                                key=f"hsnidel_{mk}{idx}{ii}", use_container_width=True):
+                                to_hsn_del = (idx, ii)
+
+                    _UQC = ["PCS","PAC","KGS","LTR","NOS","BAG","BOX","MTR","OTH"]
+                    _RT  = [0, 5, 12, 18, 28]
+                    with st.form(f"hsniadd_{mk}{idx}", clear_on_submit=True):
+                        st.caption("➕ Add a product HSN line from this invoice")
+                        hi1,hi2,hi3,hi4 = st.columns([2,1,1,1])
+                        nh = hi1.text_input("HSN code", placeholder="e.g. 38089290", key=f"nhc_{mk}{idx}")
+                        nu = hi2.selectbox("UQC",        _UQC,                       key=f"nhu_{mk}{idx}")
+                        nr = hi3.selectbox("GST %",      _RT,                        key=f"nhr_{mk}{idx}")
+                        nq = hi4.number_input("Qty", min_value=0, value=0, step=1,   key=f"nhq_{mk}{idx}")
+                        ntv = st.number_input("Taxable value (₹)", min_value=0.0, value=0.0,
+                                              step=1.0, format="%.2f",               key=f"nhtv_{mk}{idx}")
+                        if st.form_submit_button("➕ Add HSN item", use_container_width=True):
+                            if not nh.strip():
+                                st.error("HSN code is required.")
+                            elif ntv <= 0:
+                                st.error("Taxable value must be > 0.")
+                            else:
+                                _rf = nr / 100 / 2
+                                to_hsn_add = (idx, {
+                                    "hsn_sc": nh.strip(), "uqc": nu, "rt": nr,
+                                    "qty": nq, "txval": ntv,
+                                    "camt": r2(ntv * _rf), "samt": r2(ntv * _rf),
+                                })
+
+            # ── Deferred mutations (must be outside the expander loop) ────────
+            if to_hsn_add is not None:
+                bidx, item = to_hsn_add
+                _b = st.session_state.bills[mk][bidx]
+                _items = list(_b.get("hsn_items") or [])
+                _items.append(item)
+                _b["hsn_items"] = _items
+                db_save_bills(mk, st.session_state.bills[mk])
+                st.success(f"✓ HSN item ({item['hsn_sc']}) added to bill #{bidx+1}.")
+                st.rerun()
+            if to_hsn_del is not None:
+                bidx, iidx = to_hsn_del
+                _b = st.session_state.bills[mk][bidx]
+                _items = list(_b.get("hsn_items") or [])
+                _items.pop(iidx)
+                _b["hsn_items"] = _items
+                db_save_bills(mk, st.session_state.bills[mk])
+                st.rerun()
 
             if to_save is not None:
                 sidx, supdated = to_save
@@ -386,7 +476,124 @@ def page_month(mk):
         if _saved_target:
             st.caption(f"Last saved target for this month: **{fmtc(_saved_target)}**")
 
-    # ── TAB 3: DOWNLOAD DOCUMENTS ─────────────────────────────────────────────
+    # ── TAB 3: HSN SUMMARY ────────────────────────────────────────────────────
+    with tab_hsn:
+        st.caption("HSN-wise summary included in the GSTR-1 JSON. Auto-compute from purchases or add rows manually.")
+
+        cur_hsn = list(st.session_state.hsn_entries.get(mk, []))
+
+        # ── Auto-compute button ────────────────────────────────────────────
+        st.markdown("### ⚡ Auto-compute from Purchase Bills")
+        st.info("This aggregates HSN + UQC + qty + taxable value from your purchase register "
+                "and computes output GST using sales ratios. Use as a starting point then fine-tune manually.")
+
+        if st.button("🔄 Auto-compute HSN rows from bills", key=f"hsnauto_{mk}", type="primary"):
+            rows_auto = aggregate_hsn_from_bills(mk)
+            if rows_auto:
+                st.session_state.hsn_entries[mk] = rows_auto
+                db_save_hsn(mk, rows_auto)
+                st.success(f"✓ Generated {len(rows_auto)} HSN rows from purchase bill items.")
+                st.rerun()
+            else:
+                st.warning(
+                    "⚠️ No HSN item data found in purchase bills. "
+                    "Open each bill in the Purchase Bills tab, expand it, and add HSN line items from the invoice.")
+
+
+        st.markdown("---")
+        st.markdown("### ➕ Add / Edit HSN Rows")
+
+        UQC_OPTIONS = ["PCS","PAC","KGS","LTR","NOS","BAG","BOX","MTR","OTH"]
+        RT_OPTIONS  = [0, 5, 12, 18, 28]
+
+        # ── Add new row form ───────────────────────────────────────────────
+        with st.form(f"hsnadd_{mk}", clear_on_submit=True):
+            st.markdown("**New HSN row**")
+            ha1,ha2,ha3,ha4 = st.columns([2,1,1,1])
+            new_hsn  = ha1.text_input("HSN code",       placeholder="e.g. 38089290", key=f"nhsn_{mk}")
+            new_uqc  = ha2.selectbox("UQC",             UQC_OPTIONS,                key=f"nuqc_{mk}")
+            new_rt   = ha3.selectbox("GST Rate (%)",    RT_OPTIONS,                 key=f"nrt_{mk}")
+            new_qty  = ha4.number_input("Qty",  min_value=0, value=0, step=1,       key=f"nqty_{mk}")
+            hb1,hb2,hb3,hb4 = st.columns(4)
+            new_txval= hb1.number_input("Taxable value", min_value=0.0, value=0.0, step=1.0, format="%.2f", key=f"ntxv_{mk}")
+            _rf      = new_rt/100/2
+            new_camt = hb2.number_input("CGST amt",      min_value=0.0, value=r2(new_txval*_rf), step=0.01, format="%.2f", key=f"nca_{mk}")
+            new_samt = hb3.number_input("SGST amt",      min_value=0.0, value=r2(new_txval*_rf), step=0.01, format="%.2f", key=f"nsa_{mk}")
+            new_csamt= hb4.number_input("Cess amt",      min_value=0.0, value=0.0, step=0.01, format="%.2f", key=f"ncs_{mk}")
+            if st.form_submit_button("➕ Add HSN row", use_container_width=True):
+                if not new_hsn.strip():
+                    st.error("HSN code is required.")
+                elif new_txval <= 0:
+                    st.error("Taxable value must be > 0.")
+                else:
+                    next_num = max((r.get("num",0) for r in cur_hsn), default=0) + 1
+                    cur_hsn.append({
+                        "num":next_num,"hsn_sc":new_hsn.strip(),"desc":"","user_desc":"",
+                        "uqc":new_uqc,"qty":new_qty,"rt":new_rt,"txval":new_txval,
+                        "iamt":0,"camt":new_camt,"samt":new_samt,"csamt":new_csamt
+                    })
+                    st.session_state.hsn_entries[mk] = cur_hsn
+                    db_save_hsn(mk, cur_hsn)
+                    st.success(f"✓ HSN row added ({new_hsn})"); st.rerun()
+
+        # ── Existing rows table ────────────────────────────────────────────
+        if cur_hsn:
+            st.markdown(f"**{len(cur_hsn)} HSN rows saved for this month:**")
+            preview = [{
+                "#":          r.get("num",i+1),
+                "HSN Code":   r.get("hsn_sc",""),
+                "UQC":        r.get("uqc",""),
+                "Qty":        r.get("qty",0),
+                "Rate %":     r.get("rt",0),
+                "Taxable":    fmtc(r.get("txval",0)),
+                "CGST":       fmtc(r.get("camt",0)),
+                "SGST":       fmtc(r.get("samt",0)),
+            } for i,r in enumerate(cur_hsn)]
+            st.dataframe(preview, use_container_width=True, hide_index=True)
+
+            # Edit/delete individual rows
+            to_del_hsn = None
+            for i, hr in enumerate(cur_hsn):
+                lbl_h = f"#{hr.get('num',i+1)} · {hr.get('hsn_sc','')} · {hr.get('uqc','')} · @{hr.get('rt',0)}% · txval {fmtc(hr.get('txval',0))}"
+                with st.expander(lbl_h, expanded=False):
+                    hc1,hc2,hc3,hc4 = st.columns([2,1,1,1])
+                    e_hsn  = hc1.text_input("HSN code",     value=hr.get("hsn_sc",""), key=f"ehsn_{mk}{i}")
+                    e_uqc  = hc2.selectbox("UQC",           UQC_OPTIONS, index=UQC_OPTIONS.index(hr.get("uqc","PCS")) if hr.get("uqc","PCS") in UQC_OPTIONS else 0, key=f"euqc_{mk}{i}")
+                    e_rt   = hc3.selectbox("Rate %",        RT_OPTIONS,  index=RT_OPTIONS.index(hr.get("rt",0)) if hr.get("rt",0) in RT_OPTIONS else 0, key=f"ert_{mk}{i}")
+                    e_qty  = hc4.number_input("Qty",        value=int(hr.get("qty",0)), min_value=0, step=1, key=f"eqty_{mk}{i}")
+                    hd1,hd2,hd3,hd4 = st.columns(4)
+                    e_txval= hd1.number_input("Taxable",    value=float(hr.get("txval",0)), min_value=0.0, step=1.0, format="%.2f", key=f"etxv_{mk}{i}")
+                    _erf   = e_rt/100/2
+                    e_camt = hd2.number_input("CGST amt",   value=float(hr.get("camt",0)), min_value=0.0, step=0.01, format="%.2f", key=f"eca_{mk}{i}")
+                    e_samt = hd3.number_input("SGST amt",   value=float(hr.get("samt",0)), min_value=0.0, step=0.01, format="%.2f", key=f"esa_{mk}{i}")
+                    e_csamt= hd4.number_input("Cess amt",   value=float(hr.get("csamt",0)), min_value=0.0, step=0.01, format="%.2f", key=f"ecs_{mk}{i}")
+                    ec1,ec2 = st.columns(2)
+                    if ec1.button("💾 Save row", key=f"ehsave_{mk}{i}", type="primary", use_container_width=True):
+                        cur_hsn[i] = dict(cur_hsn[i])
+                        cur_hsn[i].update({"hsn_sc":e_hsn,"uqc":e_uqc,"rt":e_rt,"qty":e_qty,
+                                           "txval":e_txval,"camt":e_camt,"samt":e_samt,"csamt":e_csamt})
+                        st.session_state.hsn_entries[mk] = cur_hsn
+                        db_save_hsn(mk, cur_hsn)
+                        st.success(f"✓ Row #{hr.get('num',i+1)} updated."); st.rerun()
+                    if ec2.button("🗑 Delete row", key=f"ehdel_{mk}{i}", use_container_width=True):
+                        to_del_hsn = i
+            if to_del_hsn is not None:
+                cur_hsn.pop(to_del_hsn)
+                # Renumber
+                for n, r in enumerate(cur_hsn):
+                    r["num"] = n + 1
+                st.session_state.hsn_entries[mk] = cur_hsn
+                db_save_hsn(mk, cur_hsn)
+                st.rerun()
+
+            if st.button("🗑 Clear ALL HSN rows for this month", key=f"hsnclr_{mk}"):
+                st.session_state.hsn_entries[mk] = []
+                db_save_hsn(mk, [])
+                st.rerun()
+        else:
+            st.info("No HSN rows yet. Use Auto-compute or add rows manually above.")
+
+    # ── TAB 4: DOWNLOAD DOCUMENTS ─────────────────────────────────────────────
     with tab_docs:
         bs=bills_summary(mk)
         if bs["count"]==0:

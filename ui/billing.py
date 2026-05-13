@@ -42,7 +42,7 @@ def page_billing():
         elif product["quantity"] <= 0:
             st.error(f"❌  {product['name']} is OUT OF STOCK.")
         else:
-            gst_rate = product.get("gst_rate") or 0.05
+            gst_rate = product.get("gst_rate") if product.get("gst_rate") is not None else 0.05
             existing = next((i for i,c in enumerate(st.session_state.cart)
                              if c["product_id"] == product["id"]), None)
             if existing is not None:
@@ -87,7 +87,7 @@ def page_billing():
         if st.button("➕ Add", key="manual_add"):
             if sel_name != "-- select --":
                 prod     = prod_map[sel_name]
-                gst_rate = prod.get("gst_rate") or 0.05
+                gst_rate = prod.get("gst_rate") if prod.get("gst_rate") is not None else 0.05
                 if man_qty > prod["quantity"]:
                     st.error(f"❌  Only {prod['quantity']} {prod['unit']} available!")
                 else:

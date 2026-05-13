@@ -16,11 +16,46 @@ def calculate_gst(taxable_value: float, gst_rate: float = 0.05):
     return cgst, sgst, total
 
 def get_voucher_start(mk):
+    """Get the starting voucher number for a month (Sales). Resets to 1 every April."""
+    if mk.startswith("04-"): return 1
+    if mk in VOUCHER_START: return VOUCHER_START[mk]
+    
+    mk_list = [m[0] for m in MONTHS]
+    try:
+        idx = mk_list.index(mk)
+        # Look back for the most recent April in the current list
+        for i in range(idx - 1, -1, -1):
+            if mk_list[i].startswith("04-"):
+                # Found April! Start at 1 and add all days from intervening months
+                vno = 1
+                for j in range(i, idx):
+                    m, y = mk_list[j].split("-")
+                    vno += ld(int(m), int(y))
+                return vno
+    except ValueError:
+        pass
+
     return VOUCHER_START.get(mk, OCT_LAST_VNO + 1)
 
 def get_purchase_voucher_start(mk, ok_bills_func):
-    mk_list = [m for m,_ in MONTHS]
-    idx = mk_list.index(mk)
+    """Get starting voucher number for purchase register. Resets to 1 every April."""
+    if mk.startswith("04-"): return 1
+    
+    mk_list = [m[0] for m in MONTHS]
+    try:
+        idx = mk_list.index(mk)
+        # Look back for the most recent April
+        for i in range(idx - 1, -1, -1):
+            if mk_list[i].startswith("04-"):
+                # April started at 1
+                vno = 1
+                for j in range(i, idx):
+                    vno += len(ok_bills_func(mk_list[j]))
+                return vno
+    except ValueError:
+        pass
+
+    # Default fallback to legacy sequence (pre-April 2026 logic)
     vno = OCT_LAST_PUR_VNO + 1
     for i in range(idx):
         prev_mk = mk_list[i]

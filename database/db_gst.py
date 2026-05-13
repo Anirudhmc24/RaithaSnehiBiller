@@ -98,7 +98,7 @@ def db_load_hsn(mk):
         row = conn.execute(
             "SELECT data_json FROM hsn_entries WHERE month_key=?", (mk,)
         ).fetchone()
-    return json.loads(row["data_json"]) if row else None
+    return json.loads(row["data_json"]) if row else []
 
 def db_save_hsn(mk, entries):
     """Persist HSN entries for a month."""
