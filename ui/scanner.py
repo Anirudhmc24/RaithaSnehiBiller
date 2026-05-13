@@ -143,12 +143,13 @@ def page_scanner():
                             st.rerun()
 
         elif is_new:
+            shop_name = st.session_state.get("shop_name", "Raitha Snehi")
             st.markdown(f"""
             <div class="scan-new">
                 <h3>🆕 New Product Detected — First Time Scan!</h3>
                 <p>
                     QR Code <b>{barcode}</b> is <b>not yet registered</b> in your inventory.<br>
-                    This is the <b>first time</b> this product is being added to Sri Lakshmi Venkateshwara Traders.<br>
+                    This is the <b>first time</b> this product is being added to {shop_name}.<br>
                     Fill in the details below and click <b>Register Product</b> to save it permanently.
                 </p>
             </div>

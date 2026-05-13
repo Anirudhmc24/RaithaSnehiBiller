@@ -10,8 +10,23 @@ from config.settings import (
     SHOP_NAME, SHOP_ADDRESS1, SHOP_ADDRESS2, SHOP_ADDRESS3,
     SHOP_PHONE, SHOP_EMAIL, GSTIN, STATE_CODE
 )
+import streamlit as st
+
+def _get(key, default):
+    try:
+        return st.session_state.get(key, default)
+    except Exception:
+        return default
 
 def generate_pdf_invoice(invoice_data: dict, items: list) -> bytes:
+    shop_name = _get("shop_name", SHOP_NAME)
+    addr1 = _get("shop_address1", SHOP_ADDRESS1)
+    addr2 = _get("shop_address2", SHOP_ADDRESS2)
+    addr3 = _get("shop_address3", SHOP_ADDRESS3)
+    phone = _get("shop_phone", SHOP_PHONE)
+    email = _get("shop_email", SHOP_EMAIL)
+    gstin = _get("shop_gstin", GSTIN)
+
     buffer     = io.BytesIO()
     doc        = SimpleDocTemplate(
         buffer, pagesize=A4,
@@ -36,11 +51,11 @@ def generate_pdf_invoice(invoice_data: dict, items: list) -> bytes:
     inv   = invoice_data
 
     header_content = [
-        [Paragraph(SHOP_NAME, s_shop)],
-        [Paragraph(SHOP_ADDRESS1, s_addr)],
-        [Paragraph(SHOP_ADDRESS2, s_addr)],
-        [Paragraph(SHOP_ADDRESS3, s_addr)],
-        [Paragraph(f"📞 {SHOP_PHONE}   |   ✉ {SHOP_EMAIL}   |   GSTIN: {GSTIN}", s_addr)],
+        [Paragraph(shop_name, s_shop)],
+        [Paragraph(addr1, s_addr)],
+        [Paragraph(addr2, s_addr)],
+        [Paragraph(addr3, s_addr)],
+        [Paragraph(f"📞 {phone}   |   ✉ {email}   |   GSTIN: {gstin}", s_addr)],
     ]
     t_banner = Table(header_content, colWidths=[186*mm])
     t_banner.setStyle(TableStyle([
@@ -80,10 +95,10 @@ def generate_pdf_invoice(invoice_data: dict, items: list) -> bytes:
 
     seller_rows = [
         [Paragraph("<b>Sold By</b>", s_label)],
-        [cell("Name",  SHOP_NAME)],
-        [cell("Addr",  f"{SHOP_ADDRESS1}, {SHOP_ADDRESS2}")],
-        [cell("",      SHOP_ADDRESS3)],
-        [cell("GSTIN", GSTIN)],
+        [cell("Name",  shop_name)],
+        [cell("Addr",  f"{addr1}, {addr2}")],
+        [cell("",      addr3)],
+        [cell("GSTIN", gstin)],
         [cell("State", f"Karnataka ({STATE_CODE})")],
     ]
     buyer_name  = inv.get("customer_name")  or "Cash Customer"
@@ -196,7 +211,7 @@ def generate_pdf_invoice(invoice_data: dict, items: list) -> bytes:
 
     t_footer = Table([[
         Paragraph("This is a computer-generated invoice. No signature required.", s_foot),
-        Paragraph("<b>Authorised Signatory</b><br/>" + SHOP_NAME, ParagraphStyle("sig", fontSize=8, fontName="Helvetica", alignment=TA_RIGHT, leading=12)),
+        Paragraph("<b>Authorised Signatory</b><br/>" + shop_name, ParagraphStyle("sig", fontSize=8, fontName="Helvetica", alignment=TA_RIGHT, leading=12)),
     ]], colWidths=[120*mm, 66*mm])
     t_footer.setStyle(TableStyle([
         ("VALIGN",     (0,0),(-1,-1), "BOTTOM"),

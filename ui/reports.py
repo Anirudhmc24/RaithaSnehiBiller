@@ -55,10 +55,11 @@ def page_reports():
         with st.spinner("Generating..."):
             excel_bytes = generate_excel_report()
         today = datetime.date.today()
+        shop_prefix = st.session_state.get("invoice_prefix", "RS")
         st.download_button(
             "⬇️ Download Excel (Daily | Weekly | Monthly)",
             data=excel_bytes,
-            file_name=f"SLV_Sales_{today.strftime('%Y%m%d')}.xlsx",
+            file_name=f"{shop_prefix}_Sales_{today.strftime('%Y%m%d')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         st.success("✅ Share this with your CA for GSTR-1 filing.")

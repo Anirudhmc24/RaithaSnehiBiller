@@ -1,7 +1,7 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="Sri Lakshmi Venkateshwara Traders",
+    page_title="Raitha Snehi Biller",
     page_icon="🌱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -109,6 +109,9 @@ init_gst_db()
 db_master_init()
 
 # Session State Init
+from config.settings import load_active_shop_config
+load_active_shop_config()
+
 if "cart" not in st.session_state:
     st.session_state.cart = []
 if "last_qr_code" not in st.session_state:
@@ -125,7 +128,7 @@ st.session_state["suppliers"]      = st.session_state.gst_suppliers
 
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135800.png", width=60)
-    st.markdown("## SLV Traders")
+    st.markdown(f"## {st.session_state.get('shop_name', 'Raitha Snehi')}")
     st.caption("Fertilizer & Pesticide Management")
     st.markdown("---")
 
@@ -140,6 +143,7 @@ with st.sidebar:
             "📋 GST Registers",
             "🏪 Shop Layout",
             "📊 Reports",
+            "⚙️ Settings",
         ]
     )
 
@@ -205,6 +209,10 @@ elif page == "🏪 Shop Layout":
 elif page == "📊 Reports":
     from ui.reports import page_reports
     page_reports()
+
+elif page == "⚙️ Settings":
+    from ui.settings import page_settings
+    page_settings()
 
 with st.sidebar:
     st.markdown("---")

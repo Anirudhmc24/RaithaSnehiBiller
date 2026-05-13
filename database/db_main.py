@@ -167,9 +167,11 @@ def register_barcode_scan(qr_code: str, product_id: int, product_name: str):
     conn.close()
 
 def generate_invoice_no():
+    settings = get_shop_settings()
+    prefix_base = settings.get("invoice_prefix", "RS-")
     conn   = get_conn()
     now    = datetime.datetime.now()
-    prefix = f"SLV-{now.strftime('%Y%m')}-"
+    prefix = f"{prefix_base}{now.strftime('%Y%m')}-"
     row    = conn.execute(
         "SELECT invoice_no FROM invoices WHERE invoice_no LIKE ? ORDER BY id DESC LIMIT 1",
         (prefix + "%",)
@@ -191,5 +193,20 @@ def save_shop_layout(layout_dict):
     conn = get_conn()
     conn.execute("INSERT OR REPLACE INTO shop_config (key, value_json) VALUES (?,?)", 
                  ('layout_tree', json.dumps(layout_dict)))
+    conn.commit()
+    conn.close()
+
+def get_shop_settings():
+    conn = get_conn()
+    row = conn.execute("SELECT value_json FROM shop_config WHERE key='shop_settings'").fetchone()
+    conn.close()
+    if row:
+        return json.loads(row["value_json"])
+    return {}
+
+def save_shop_settings(settings_dict):
+    conn = get_conn()
+    conn.execute("INSERT OR REPLACE INTO shop_config (key, value_json) VALUES (?,?)", 
+                 ('shop_settings', json.dumps(settings_dict)))
     conn.commit()
     conn.close()

@@ -1,10 +1,10 @@
 @echo off
-title SLV Traders - Shop Manager
+title Raitha Snehi - Shop Manager
 color 0A
 
 echo.
 echo  ==========================================
-echo   Sri Lakshmi Venkateshwara Traders
+echo   Raitha Snehi Biller
 echo   Shop Management + GST Registers
 echo  ==========================================
 echo.
@@ -56,14 +56,14 @@ if errorlevel 1 (
 :: ── Launch ─────────────────────────────────────────────────────────────────
 echo.
 echo  ==========================================
-echo   Opening SLV Traders...
+echo   Opening Raitha Snehi Biller...
 echo   Browser opens at http://localhost:8501
 echo   DO NOT close this window while using.
 echo  ==========================================
 echo.
 
 powershell -Command "Start-Sleep -Seconds 3; Start-Process 'http://localhost:8501'"
-python -m streamlit run "%~dp0app.py" --server.port 8501 --server.headless false --browser.gatherUsageStats false
+python -m streamlit run "%~dp0main.py" --server.port 8501 --server.headless false --browser.gatherUsageStats false
 
 :: ── If we get here, streamlit stopped ──────────────────────────────────────
 echo.

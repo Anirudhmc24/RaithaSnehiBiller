@@ -18,7 +18,7 @@ if __name__ == "__main__":
     script_path = resolve_path("main.py")
 
     print("+--------------------------------------------------+")
-    print("|   Sri Lakshmi Venkateshwara Traders              |")
+    print("|   Raitha Snehi Biller                            |")
     print("|   Fertilizer & Pesticide Management System       |")
     print("+--------------------------------------------------+")
     print("|   Starting... App will open in your browser.     |")

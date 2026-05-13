@@ -84,3 +84,23 @@ NAV_PAGES = [
     ("📋", "GST Registers"),
     ("🏪", "Shop Layout"),
 ]
+
+def load_active_shop_config():
+    import streamlit as st
+    try:
+        from database.db_main import get_shop_settings
+        db_settings = get_shop_settings()
+    except Exception:
+        db_settings = {}
+
+    st.session_state["shop_name"] = db_settings.get("shop_name", SHOP_NAME)
+    st.session_state["shop_address1"] = db_settings.get("shop_address1", SHOP_ADDRESS1)
+    st.session_state["shop_address2"] = db_settings.get("shop_address2", SHOP_ADDRESS2)
+    st.session_state["shop_address3"] = db_settings.get("shop_address3", SHOP_ADDRESS3)
+    st.session_state["shop_phone"] = db_settings.get("shop_phone", SHOP_PHONE)
+    st.session_state["shop_email"] = db_settings.get("shop_email", SHOP_EMAIL)
+    st.session_state["shop_gstin"] = db_settings.get("shop_gstin", GSTIN)
+    st.session_state["invoice_prefix"] = db_settings.get("invoice_prefix", "RS-")
+
+    st.session_state["shop_addr1"] = f'{st.session_state["shop_address1"]}, {st.session_state["shop_address2"]}'
+    st.session_state["shop_addr2"] = st.session_state["shop_address3"]
