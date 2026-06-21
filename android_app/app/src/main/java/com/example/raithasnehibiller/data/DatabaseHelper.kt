@@ -87,6 +87,14 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
     }
 
     override fun onCreate(db: SQLiteDatabase) {
+        // Check if tables already exist to prevent crash if pre-seeded database was copied
+        val checkCursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name=?", arrayOf(TABLE_INVENTORY))
+        val tableExists = checkCursor.count > 0
+        checkCursor.close()
+        if (tableExists) {
+            return
+        }
+
         // Create Inventory Table
         val createInventoryTable = ("CREATE TABLE " + TABLE_INVENTORY + "("
                 + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
