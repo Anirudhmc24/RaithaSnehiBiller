@@ -22,7 +22,12 @@ def page_reports():
         bs=bills_summary(mk)
         if bs["count"]==0: continue
         any_ready=True
-        st.markdown(f"**{lbl}** — {bs['count']} purchase bills · Est. sales {fmtc(sum(derive_sales_totals(mk).values()))}")
+        st.markdown(f"""
+        <div style="background:#ffffff;border:1px solid rgba(226,232,240,0.8);padding:20px;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 12px rgba(15,23,42,0.02);">
+            <div style="font-weight:700;font-size:1.05rem;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+                📅 {lbl} &nbsp;<span style="font-weight:500;font-size:0.85rem;color:#64748b;">({bs['count']} bills · Est. sales {fmtc(sum(derive_sales_totals(mk).values()))})</span>
+            </div>
+        """, unsafe_allow_html=True)
         c1,c2,c3=st.columns(3)
         start_vno=get_voucher_start(mk)
         overrides = st.session_state.sales_override.get(mk, {})
@@ -36,15 +41,19 @@ def page_reports():
         c1.download_button("⬇ Sales Register .xlsx",data=sales_xls,
             file_name=f"Sales_Register_{mname}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
             key=f"dd_s_{mk}")
         c2.download_button("⬇ Purchase Register .xlsx",data=pur_xls,
             file_name=f"Purchase_Register_{mname}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
             key=f"dd_p_{mk}")
         c3.download_button(f"⬇ GSTR-1 JSON",data=json.dumps(gstr1,indent=2).encode(),
             file_name=f"{GSTIN}_GSTR1_{MON_ABBR[m2]}{y2}.json",
-            mime="application/json",key=f"dd_g_{mk}")
-        st.markdown("")
+            mime="application/json",
+            use_container_width=True,
+            key=f"dd_g_{mk}")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     if not any_ready:
         st.info("No months have purchase bills yet. Go to GST Registers to enter data.")

@@ -8,16 +8,18 @@ def page_scanner():
     st.subheader("🔬 USB QR Code Scanner — Inventory & Billing")
 
     st.markdown("""
-    <div style="background:#e3f2fd;border-left:5px solid #1565c0;
-                padding:12px 16px;border-radius:8px;margin-bottom:16px;color:#0d47a1;">
-        <b>📡 How to use your USB QR Code Scanner:</b><br>
-        1. Plug the USB QR scanner into your PC — it works like a keyboard, no drivers needed<br>
-        2. Select the <b>mode</b> below (Receive Stock or Billing)<br>
-        3. Click inside the <b>"Scan QR Code Here"</b> box<br>
-        4. Point the scanner at any product QR code and pull the trigger<br>
-        5. The scanner reads the QR and types the code automatically<br><br>
-        <b>✅ Known product</b> → Shows details + restock/billing form instantly<br>
-        <b>🆕 New product</b> → Prompts you to fill product details and register it
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:6px solid #22c55e;
+                padding:20px;border-radius:12px;margin-bottom:24px;color:#166534;">
+        <h4 style="margin: 0 0 10px 0; color: #15803d; font-weight: 700;">📡 Barcode/QR Scanner Quick Integration:</h4>
+        <ol style="margin: 0; padding-left: 20px; line-height: 1.6; font-size: 0.95rem; font-weight: 500;">
+            <li>Plug your standard USB QR Scanner into the computer (plug-and-play).</li>
+            <li>Select the action mode below (<b>Receive Stock</b> or <b>Billing</b>).</li>
+            <li>Click inside the <b>"Scan QR Code Here"</b> field.</li>
+            <li>Aim the scanner at a product QR code and trigger it.</li>
+        </ol>
+        <div style="margin-top: 12px; font-size: 0.9rem; font-weight: 600; color: #166534;">
+            ✨ Known items will automatically resolve and open forms. New codes will prompt immediate product registration.
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -106,11 +108,12 @@ def page_scanner():
                     gst_rate = product.get("gst_rate") or 0.05
                     taxable  = round(product["mrp"] * b_qty, 2)
                     cgst_prev, sgst_prev, total_prev = calculate_gst(taxable, gst_rate)
+                    from ui.components import render_metric_card
                     pc1,pc2,pc3,pc4 = st.columns(4)
-                    pc1.metric("Taxable",  f"₹ {taxable:.2f}")
-                    pc2.metric(f"CGST ({gst_rate/2*100:.1f}%)", f"₹ {cgst_prev:.2f}")
-                    pc3.metric(f"SGST ({gst_rate/2*100:.1f}%)", f"₹ {sgst_prev:.2f}")
-                    pc4.metric("Line Total", f"₹ {total_prev:.2f}")
+                    with pc1: render_metric_card("Taxable Value", f"₹ {taxable:.2f}", "📋")
+                    with pc2: render_metric_card(f"CGST ({gst_rate/2*100:.1f}%)", f"₹ {cgst_prev:.2f}", "⚡")
+                    with pc3: render_metric_card(f"SGST ({gst_rate/2*100:.1f}%)", f"₹ {sgst_prev:.2f}", "🍃")
+                    with pc4: render_metric_card("Line Total", f"₹ {total_prev:.2f}", "🌱")
 
                     if st.form_submit_button("➕ Add to Cart", type="primary"):
                         if b_qty > product["quantity"]:
@@ -180,12 +183,13 @@ def page_scanner():
                     rate      = GST_RATES[np_gst]
                     taxable   = round(np_mrp * np_qty, 2)
                     cgst_p, sgst_p, total_p = calculate_gst(taxable, rate)
+                    from ui.components import render_metric_card
                     pv1,pv2,pv3,pv4,pv5 = st.columns(5)
-                    pv1.metric("MRP × Qty",       f"₹ {taxable:.2f}")
-                    pv2.metric(f"CGST ({rate/2*100:.1f}%)", f"₹ {cgst_p:.2f}")
-                    pv3.metric(f"SGST ({rate/2*100:.1f}%)", f"₹ {sgst_p:.2f}")
-                    pv4.metric("Total GST",        f"₹ {cgst_p+sgst_p:.2f}")
-                    pv5.metric("Invoice Value",    f"₹ {total_p:.2f}")
+                    with pv1: render_metric_card("MRP × Qty", f"₹ {taxable:.2f}", "📋")
+                    with pv2: render_metric_card(f"CGST ({rate/2*100:.1f}%)", f"₹ {cgst_p:.2f}", "⚡")
+                    with pv3: render_metric_card(f"SGST ({rate/2*100:.1f}%)", f"₹ {sgst_p:.2f}", "🍃")
+                    with pv4: render_metric_card("Total GST", f"₹ {cgst_p+sgst_p:.2f}", "💰")
+                    with pv5: render_metric_card("Invoice Value", f"₹ {total_p:.2f}", "🌱")
                 else:
                     st.caption("Enter MRP and Opening Qty above to see GST preview.")
 

@@ -24,11 +24,35 @@ def page_dashboard():
         (today.strftime("%Y-%m"),)).fetchone()[0]
     inv_count     = conn.execute("SELECT COUNT(*) FROM invoices").fetchone()[0]
 
+    from ui.components import render_metric_card
+    
     mc1,mc2,mc3,mc4 = st.columns(4)
-    mc1.metric("Today",          f"₹ {daily_total:,.2f}")
-    mc2.metric("This Week",      f"₹ {weekly_total:,.2f}")
-    mc3.metric("This Month",     f"₹ {monthly_total:,.2f}")
-    mc4.metric("Total Invoices", inv_count)
+    with mc1:
+        render_metric_card("Today's Sales", f"₹ {daily_total:,.2f}", "📅")
+    with mc2:
+        render_metric_card("Weekly Sales", f"₹ {weekly_total:,.2f}", "📊")
+    with mc3:
+        render_metric_card("Monthly Sales", f"₹ {monthly_total:,.2f}", "🌱")
+    with mc4:
+        render_metric_card("Total Invoices", f"{inv_count}", "🧾")
+    
+    # Dashboard Hero Quick Action Card
+    st.markdown('<div class="hero-card">', unsafe_allow_html=True)
+    hc1, hc2 = st.columns([3.2, 1])
+    with hc1:
+        st.markdown("""
+        <h3 style="margin: 0 0 6px 0; color: #1b5e20; font-size: 1.35rem; font-weight: 700;">🌱 Create New GST Invoice</h3>
+        <p style="margin: 0; color: #334155; font-size: 0.95rem; line-height: 1.5; font-weight: 500;">
+            Issue professional bills with automated tax calculations for fertilizers, pesticides, and seeds. Full barcode/QR scanner support included.
+        </p>
+        """, unsafe_allow_html=True)
+    with hc2:
+        st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
+        if st.button("🧾 Start Billing", key="dash_new_bill_btn", type="primary", use_container_width=True):
+            st.session_state.active_page = "🧾 New Bill"
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
     
     st.markdown("---")
     st.markdown("### Month-by-Month GST Summary")

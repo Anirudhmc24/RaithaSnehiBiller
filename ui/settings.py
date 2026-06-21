@@ -53,3 +53,32 @@ def page_settings():
             st.session_state["shop_addr2"] = new_settings["shop_address3"]
             
             st.rerun()
+
+    st.markdown("---")
+    st.markdown("### 🔒 Change Account Password")
+    st.caption("Change your login credentials securely. Passwords will be cryptographically hashed.")
+    
+    with st.form("change_password_form"):
+        old_password = st.text_input("Current Password", type="password")
+        new_password = st.text_input("New Password", type="password", help="Minimum 6 characters")
+        confirm_new_password = st.text_input("Confirm New Password", type="password")
+        
+        submit_pw = st.form_submit_button("Update Password", type="primary")
+        
+        if submit_pw:
+            if not old_password or not new_password or not confirm_new_password:
+                st.error("Please fill all password fields.")
+            elif len(new_password) < 6:
+                st.error("New password must be at least 6 characters.")
+            elif new_password != confirm_new_password:
+                st.error("New passwords do not match.")
+            else:
+                from database.db_main import get_user, update_user_password
+                from utils.security import verify_password
+                
+                user_info = get_user(st.session_state.username)
+                if user_info and verify_password(old_password, user_info["password_hash"], user_info["salt"]):
+                    update_user_password(st.session_state.username, new_password)
+                    st.success("✅ Password updated successfully! Please note your changes.")
+                else:
+                    st.error("❌ Incorrect current password.")

@@ -72,25 +72,25 @@ def bill_fields(bill, kp):
 
     _def = bill
 
-    st.markdown("<div style='font-size:11px;font-weight:600;color:#4a7a47;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 3px'>18% slab</div>", unsafe_allow_html=True)
+    st.markdown("<div class='slab-title'>18% slab</div>", unsafe_allow_html=True)
     ea1,ea2,ea3 = st.columns(3)
     updated["val18"] = ea1.number_input("Taxable value", value=float(_def.get("val18") or 0), min_value=0.0, step=1.0, format="%.2f", key=f"{kp}v18")
     updated["cgst9"] = ea2.number_input("CGST 9%",       value=float(_def.get("cgst9") or r2(updated["val18"]*0.09)), min_value=0.0, step=0.01, format="%.2f", key=f"{kp}c9")
     updated["sgst9"] = ea3.number_input("SGST 9%",       value=float(_def.get("sgst9") or r2(updated["val18"]*0.09)), min_value=0.0, step=0.01, format="%.2f", key=f"{kp}s9")
 
-    st.markdown("<div style='font-size:11px;font-weight:600;color:#4a7a47;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 3px'>5% slab</div>", unsafe_allow_html=True)
+    st.markdown("<div class='slab-title'>5% slab</div>", unsafe_allow_html=True)
     eb1,eb2,eb3 = st.columns(3)
     updated["val5"]   = eb1.number_input("Taxable value", value=float(_def.get("val5")   or 0), min_value=0.0, step=1.0,  format="%.2f", key=f"{kp}v5")
     updated["cgst25"] = eb2.number_input("CGST 2.5%",     value=float(_def.get("cgst25") or r2(updated["val5"]*0.025)), min_value=0.0, step=0.01, format="%.2f", key=f"{kp}c25")
     updated["sgst25"] = eb3.number_input("SGST 2.5%",     value=float(_def.get("sgst25") or r2(updated["val5"]*0.025)), min_value=0.0, step=0.01, format="%.2f", key=f"{kp}s25")
 
-    st.markdown("<div style='font-size:11px;font-weight:600;color:#4a7a47;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 3px'>12% slab</div>", unsafe_allow_html=True)
+    st.markdown("<div class='slab-title'>12% slab</div>", unsafe_allow_html=True)
     ec1,ec2,ec3 = st.columns(3)
     updated["val12"] = ec1.number_input("Taxable value", value=float(_def.get("val12") or 0), min_value=0.0, step=1.0,  format="%.2f", key=f"{kp}v12")
     updated["cgst6"] = ec2.number_input("CGST 6%",       value=float(_def.get("cgst6") or r2(updated["val12"]*0.06)), min_value=0.0, step=0.01, format="%.2f", key=f"{kp}c6")
     updated["sgst6"] = ec3.number_input("SGST 6%",       value=float(_def.get("sgst6") or r2(updated["val12"]*0.06)), min_value=0.0, step=0.01, format="%.2f", key=f"{kp}s6")
 
-    st.markdown("<div style='font-size:11px;font-weight:600;color:#4a7a47;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 3px'>Other</div>", unsafe_allow_html=True)
+    st.markdown("<div class='slab-title'>Other</div>", unsafe_allow_html=True)
     ed1,ed2,ed3,ed4 = st.columns(4)
     updated["exempt"]    = ed1.number_input("Exempt/Nil",    value=float(_def.get("exempt")    or 0), min_value=0.0, step=1.0,  format="%.2f", key=f"{kp}ex")
     updated["round_off"] = ed2.number_input("Round off",     value=float(_def.get("round_off") or 0), step=0.01,               format="%.2f", key=f"{kp}ro")
@@ -102,9 +102,14 @@ def bill_fields(bill, kp):
 
     itc = r2(updated["cgst9"]+updated["sgst9"]+updated["cgst25"]+updated["sgst25"])
     st.markdown(
-        f"<div style='background:#eaf2e8;border-radius:5px;padding:7px 12px;font-size:12px;color:#1a3c1a;margin-top:6px'>"
-        f"Total GST: <strong>{fmtc(total_gst)}</strong> &nbsp;|&nbsp; ITC: <strong>{fmtc(itc)}</strong> &nbsp;|&nbsp; Gross: <strong>{fmtc(updated['gross'])}</strong>"
+        f"<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 16px;font-size:13px;color:#166534;margin-top:12px;display:flex;gap:16px;font-weight:500;'>"
+        f"<span>Total GST: <strong>{fmtc(total_gst)}</strong></span>"
+        f"<span>|</span>"
+        f"<span>ITC: <strong>{fmtc(itc)}</strong></span>"
+        f"<span>|</span>"
+        f"<span>Gross: <strong>{fmtc(updated['gross'])}</strong></span>"
         f"</div>", unsafe_allow_html=True)
+
     
     try:
         pts = updated["inv_date"].split("-")
@@ -136,25 +141,25 @@ def page_month(mk):
             nb["pur_vno"] = c5f.number_input("Voucher No. (Tally)", min_value=1,
                                               value=_next_pur_vno, step=1, key=f"npvno{mk}")
 
-            st.markdown("<div style='font-size:11px;font-weight:600;color:#4a7a47;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 3px'>18% slab</div>", unsafe_allow_html=True)
+            st.markdown("<div class='slab-title'>18% slab</div>", unsafe_allow_html=True)
             fa1,fa2,fa3 = st.columns(3)
             nb["val18"] = fa1.number_input("Taxable value", min_value=0.0,value=0.0,step=1.0,format="%.2f",key=f"nv18{mk}")
             nb["cgst9"] = fa2.number_input("CGST 9%  (auto-fills)",  min_value=0.0,value=r2(nb["val18"]*0.09), step=0.01,format="%.2f",key=f"nc9{mk}")
             nb["sgst9"] = fa3.number_input("SGST 9%  (auto-fills)",  min_value=0.0,value=r2(nb["val18"]*0.09), step=0.01,format="%.2f",key=f"ns9{mk}")
 
-            st.markdown("<div style='font-size:11px;font-weight:600;color:#4a7a47;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 3px'>5% slab</div>", unsafe_allow_html=True)
+            st.markdown("<div class='slab-title'>5% slab</div>", unsafe_allow_html=True)
             fb1,fb2,fb3 = st.columns(3)
             nb["val5"]   = fb1.number_input("Taxable value", min_value=0.0,value=0.0,step=1.0,format="%.2f",key=f"nv5{mk}")
             nb["cgst25"] = fb2.number_input("CGST 2.5% (auto-fills)",min_value=0.0,value=r2(nb["val5"]*0.025),step=0.01,format="%.2f",key=f"nc25{mk}")
             nb["sgst25"] = fb3.number_input("SGST 2.5% (auto-fills)",min_value=0.0,value=r2(nb["val5"]*0.025),step=0.01,format="%.2f",key=f"ns25{mk}")
 
-            st.markdown("<div style='font-size:11px;font-weight:600;color:#4a7a47;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 3px'>12% slab</div>", unsafe_allow_html=True)
+            st.markdown("<div class='slab-title'>12% slab</div>", unsafe_allow_html=True)
             fc1,fc2,fc3 = st.columns(3)
             nb["val12"] = fc1.number_input("Taxable value", min_value=0.0,value=0.0,step=1.0,format="%.2f",key=f"nv12{mk}")
             nb["cgst6"] = fc2.number_input("CGST 6%  (auto-fills)",  min_value=0.0,value=r2(nb["val12"]*0.06),step=0.01,format="%.2f",key=f"nc6{mk}")
             nb["sgst6"] = fc3.number_input("SGST 6%  (auto-fills)",  min_value=0.0,value=r2(nb["val12"]*0.06),step=0.01,format="%.2f",key=f"ns6{mk}")
 
-            st.markdown("<div style='font-size:11px;font-weight:600;color:#4a7a47;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 3px'>Other</div>", unsafe_allow_html=True)
+            st.markdown("<div class='slab-title'>Other</div>", unsafe_allow_html=True)
             fd1,fd2,fd3,fd4 = st.columns(4)
             nb["exempt"]    = fd1.number_input("Exempt/Nil",   min_value=0.0,value=0.0,step=1.0,format="%.2f",key=f"nex{mk}")
             nb["round_off"] = fd2.number_input("Round off",    value=0.0,step=0.01,format="%.2f",key=f"nro{mk}")
@@ -200,12 +205,13 @@ def page_month(mk):
             if rows:
                 st.dataframe(rows, use_container_width=True, hide_index=True)
 
+            from ui.components import render_metric_card
             sc1,sc2,sc3,sc4,sc5 = st.columns(5)
-            sc1.metric("Total taxable", fmtc(p["val18"]+p["val5"]+p["val12"]+p["exempt"]))
-            sc2.metric("Total GST",     fmtc(_tgst))
-            sc3.metric("ITC",           fmtc(_itc))
-            sc4.metric("Round off",     fmtc(p.get("round_off") or 0))
-            sc5.metric("Gross total",   fmtc(p["gross"]))
+            with sc1: render_metric_card("Total Taxable", fmtc(p["val18"]+p["val5"]+p["val12"]+p["exempt"]), "📊")
+            with sc2: render_metric_card("Total GST",     fmtc(_tgst), "⚡")
+            with sc3: render_metric_card("ITC",           fmtc(_itc), "💰")
+            with sc4: render_metric_card("Round Off",     fmtc(p.get("round_off") or 0), "⚖️")
+            with sc5: render_metric_card("Gross Total",   fmtc(p["gross"]), "🌱")
 
             ac1, ac2 = st.columns(2)
             if ac1.button("✅  Add bill to register", type="primary", use_container_width=True, key=f"confirm_{mk}"):
@@ -267,11 +273,12 @@ def page_month(mk):
             st.markdown("---")
             bs=bills_summary(mk)
 
+            from ui.components import render_metric_card
             c1,c2,c3,c4=st.columns(4)
-            c1.metric("Bills entered",    bs["count"])
-            c2.metric("Total taxable",    fmtc(bs["p18"]+bs["p5"]+bs["p12"]))
-            c3.metric("ITC available",    fmtc(bs["itc"]))
-            c4.metric("Gross total",      fmtc(bs["gross"]))
+            with c1: render_metric_card("Bills Entered", f"{bs['count']}", "🧾")
+            with c2: render_metric_card("Total Taxable", fmtc(bs["p18"]+bs["p5"]+bs["p12"]), "📊")
+            with c3: render_metric_card("ITC Available", fmtc(bs["itc"]), "💰")
+            with c4: render_metric_card("Gross Total",   fmtc(bs["gross"]), "🌱")
 
             st.markdown(f"### 📋 Bills added — {len(ok_list)} total")
             tbl_rows = []
@@ -410,10 +417,13 @@ def page_month(mk):
         totals=derive_sales_totals(mk)
         st.markdown("Sales are auto-derived from your purchase data.")
 
+        from ui.components import render_metric_card
         c1,c2,c3,c4,c5=st.columns(5)
-        c1.metric("Est. total sales",fmtc(sum(totals.values())))
-        c2.metric("@18%",fmtc(totals["v18"])); c3.metric("@5%",fmtc(totals["v5"]))
-        c4.metric("@12%",fmtc(totals["v12"])); c5.metric("Exempt",fmtc(totals["vex"]))
+        with c1: render_metric_card("Est. Total Sales", fmtc(sum(totals.values())), "📊")
+        with c2: render_metric_card("Sales @18%",       fmtc(totals["v18"]), "⚡")
+        with c3: render_metric_card("Sales @5%",        fmtc(totals["v5"]), "🍃")
+        with c4: render_metric_card("Sales @12%",       fmtc(totals["v12"]), "🔬")
+        with c5: render_metric_card("Exempt Sales",     fmtc(totals["vex"]), "🌾")
 
         st.markdown("---")
         st.markdown("**Daily breakdown**")
@@ -466,7 +476,7 @@ def page_month(mk):
         _rev5  = smart_target - _rev18
         _tx18  = _rev18 / 1.18
         _tx5   = _rev5  / 1.05
-        st.markdown(f"<div style='background:#eaf7ea;border-radius:6px;padding:8px 14px;font-size:12px;color:#1a3c1a;margin:4px 0 8px 0'>Split preview → <b>18% slab (75%):</b> taxable {fmtc(_tx18)} + GST {fmtc(_tx18*0.18)} = {fmtc(_rev18)} &nbsp;|&nbsp; <b>5% slab (25%):</b> taxable {fmtc(_tx5)} + GST {fmtc(_tx5*0.05)} = {fmtc(_rev5)} &nbsp;|&nbsp; <b>Grand total gross: {fmtc(smart_target)}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 16px;font-size:13px;color:#166534;margin:8px 0;'>Split preview → <b>18% slab (75%):</b> taxable {fmtc(_tx18)} + GST {fmtc(_tx18*0.18)} = {fmtc(_rev18)} &nbsp;|&nbsp; <b>5% slab (25%):</b> taxable {fmtc(_tx5)} + GST {fmtc(_tx5*0.05)} = {fmtc(_rev5)} &nbsp;|&nbsp; <b>Grand total gross: {fmtc(smart_target)}</b></div>", unsafe_allow_html=True)
 
         if _btn_col.button("🚀 Generate Smart Override", key=f"smart_gen_{mk}", type="primary", use_container_width=True):
             with st.spinner(f"Distributing ₹{smart_target:,.0f} across {ld(m,y)} days…"):
@@ -612,11 +622,12 @@ def page_month(mk):
         st.markdown(f"### Summary — {lbl}")
         out_gst=r2(sales_g["c9"]+sales_g["s9"]+sales_g["c25"]+sales_g["s25"]+sales_g["c6"]+sales_g["s6"])
         net_pay=r2(max(0, out_gst - bs["itc"]))
+        from ui.components import render_metric_card
         c1,c2,c3,c4=st.columns(4)
-        c1.metric("Total sales",     fmtc(sales_g["val"]))
-        c2.metric("Output GST",      fmtc(out_gst))
-        c3.metric("ITC (purchases)", fmtc(bs["itc"]))
-        c4.metric("Net GST payable", fmtc(net_pay))
+        with c1: render_metric_card("Total Sales",     fmtc(sales_g["val"]), "📊")
+        with c2: render_metric_card("Output GST",      fmtc(out_gst), "📈")
+        with c3: render_metric_card("ITC (Purchases)", fmtc(bs["itc"]), "💰")
+        with c4: render_metric_card("Net GST Payable", fmtc(net_pay), "⚖️")
 
         st.markdown("---")
         st.markdown("### Download all 3 documents")

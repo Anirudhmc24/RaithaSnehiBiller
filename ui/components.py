@@ -31,3 +31,30 @@ def render_location_selector(tree, key_prefix="loc"):
         level += 1
         
     return " > ".join(path)
+
+def render_step_header(step_num, title, description):
+    import streamlit as st
+    st.markdown(f"""
+    <div class="step-header">
+        <div class="step-number">{step_num}</div>
+        <div class="step-details">
+            <h2>{title}</h2>
+            <p>{description}</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_metric_card(label, value, icon="📈"):
+    import streamlit as st
+    st.markdown(f"""
+    <div class="custom-metric-card">
+        <div class="metric-info">
+            <span class="metric-label">{label}</span>
+            <span class="metric-value">{value}</span>
+        </div>
+        <div class="metric-icon-box">
+            {icon}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+

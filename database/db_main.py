@@ -133,6 +133,28 @@ def init_db():
                 SELECT ?,id,name,?,1 FROM inventory WHERE qr_code=?
             """, (s[0], now, s[0]))
 
+    # ── Users Authentication ───────────────────────────────────────────────
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            username      TEXT    UNIQUE NOT NULL,
+            password_hash TEXT    NOT NULL,
+            salt          TEXT    NOT NULL,
+            role          TEXT    DEFAULT 'user',
+            status        TEXT    DEFAULT 'pending',
+            created_at    TEXT    NOT NULL
+        )
+    """)
+    c.execute("SELECT COUNT(*) FROM users")
+    if c.fetchone()[0] == 0:
+        from utils.security import hash_password
+        h, s = hash_password("admin")
+        now_str = datetime.datetime.now().isoformat()
+        c.execute("""
+            INSERT INTO users (username, password_hash, salt, role, status, created_at)
+            VALUES ('admin', ?, ?, 'admin', 'approved', ?)
+        """, (h, s, now_str))
+
     conn.commit()
     conn.close()
 
@@ -208,5 +230,65 @@ def save_shop_settings(settings_dict):
     conn = get_conn()
     conn.execute("INSERT OR REPLACE INTO shop_config (key, value_json) VALUES (?,?)", 
                  ('shop_settings', json.dumps(settings_dict)))
+    conn.commit()
+    conn.close()
+
+def get_user(username: str):
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM users WHERE username = ?", (username.strip().lower(),)).fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return None
+
+def add_user(username: str, password_raw: str, role: str = 'user', status: str = 'pending') -> bool:
+    username = username.strip().lower()
+    if get_user(username):
+        return False
+    from utils.security import hash_password
+    h, s = hash_password(password_raw)
+    now = datetime.datetime.now().isoformat()
+    conn = get_conn()
+    try:
+        conn.execute("""
+            INSERT INTO users (username, password_hash, salt, role, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (username, h, s, role, status, now))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+def get_all_users():
+    conn = get_conn()
+    rows = conn.execute("SELECT id, username, role, status, created_at FROM users ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def update_user_status(username: str, status: str):
+    conn = get_conn()
+    conn.execute("UPDATE users SET status = ? WHERE username = ?", (status, username.strip().lower()))
+    conn.commit()
+    conn.close()
+
+def update_user_role(username: str, role: str):
+    conn = get_conn()
+    conn.execute("UPDATE users SET role = ? WHERE username = ?", (role, username.strip().lower()))
+    conn.commit()
+    conn.close()
+
+def delete_user(username: str):
+    conn = get_conn()
+    conn.execute("DELETE FROM users WHERE username = ?", (username.strip().lower(),))
+    conn.commit()
+    conn.close()
+
+def update_user_password(username: str, new_password_raw: str):
+    from utils.security import hash_password
+    h, s = hash_password(new_password_raw)
+    conn = get_conn()
+    conn.execute("UPDATE users SET password_hash = ?, salt = ? WHERE username = ?", (h, s, username.strip().lower()))
     conn.commit()
     conn.close()

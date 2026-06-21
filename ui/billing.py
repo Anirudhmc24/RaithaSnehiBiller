@@ -12,14 +12,8 @@ def page_billing():
         if k not in st.session_state:
             st.session_state[k] = v
 
-    st.markdown("""
-    <div style="background:#1a3c5e;border-radius:12px;padding:18px 22px;margin-bottom:18px;">
-        <h2 style="color:white;margin:0 0 4px 0;font-size:1.4rem;">📱 Step 1 — Scan Product</h2>
-        <p style="color:#c8e6c9;margin:0;font-size:0.9rem;">
-            Click the box below → point scanner at QR code → item added instantly
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    from ui.components import render_step_header
+    render_step_header("1", "Scan Product", "Click the input below, scan the item's QR code, or use manual entry.")
 
     with st.form("bill_qr_form", clear_on_submit=True):
         bill_qr = st.text_input(
@@ -118,11 +112,7 @@ def page_billing():
                         })
                     st.rerun()
 
-    st.markdown("""
-    <div style="background:#2e7d32;border-radius:12px;padding:14px 22px;margin:18px 0 12px 0;">
-        <h2 style="color:white;margin:0;font-size:1.3rem;">🛒 Step 2 — Items in Cart</h2>
-    </div>
-    """, unsafe_allow_html=True)
+    render_step_header("2", "Review Cart Items", "View products added to this invoice. Adjust quantities or clear items as needed.")
 
     if st.session_state.cart:
         cart_display = []
@@ -173,48 +163,58 @@ def page_billing():
 
         if discount_amt > 0:
             st.markdown(f"""
-            <div style="background:#fff8e1;border:2px solid #f9a825;border-radius:12px;
-                        padding:16px 24px;margin:12px 0;text-align:center;">
-                <p style="margin:0;color:#555;font-size:0.9rem;">
-                    Subtotal &nbsp;₹{sub_total:.2f}
-                    &nbsp; — &nbsp;
-                    <span style="color:#c62828;font-weight:bold;">
-                        Discount&nbsp;
-                        {"(" + str(disc_val) + "%)" if disc_type == "% Percentage" else ""}
-                        &nbsp;₹{discount_amt:.2f}
-                    </span>
-                </p>
-                <h1 style="margin:6px 0 0 0;color:#1a3c5e;font-size:2.2rem;">
-                    TOTAL &nbsp; ₹ {grand_total:.2f}
-                </h1>
-                <p style="margin:4px 0 0 0;color:#777;font-size:0.8rem;">
-                    Taxable ₹{grand_taxable:.2f} + CGST ₹{grand_cgst:.2f} + SGST ₹{grand_sgst:.2f}
-                </p>
+            <div class="receipt-container">
+                <div class="receipt-header">
+                    <span class="receipt-title">Invoice Summary</span>
+                </div>
+                <div class="receipt-row" style="margin-top: 12px;">
+                    <span>Cart Subtotal</span>
+                    <span>₹ {sub_total:,.2f}</span>
+                </div>
+                <div class="receipt-row" style="color: #c62828; font-weight: 600;">
+                    <span>Discount ({"Fixed" if disc_type == "₹ Fixed Amount" else f"{disc_val}%"})</span>
+                    <span>- ₹ {discount_amt:,.2f}</span>
+                </div>
+                <div class="receipt-row">
+                    <span>Taxable Value</span>
+                    <span>₹ {grand_taxable:,.2f}</span>
+                </div>
+                <div class="receipt-row">
+                    <span>Intra-state CGST + SGST</span>
+                    <span>₹ {grand_cgst + grand_sgst:,.2f}</span>
+                </div>
+                <div class="receipt-total-row">
+                    <span class="receipt-total-label">Grand Total (GST Incl.)</span>
+                    <span class="receipt-total-value">₹ {grand_total:,.2f}</span>
+                </div>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            <div style="background:#fff8e1;border:2px solid #f9a825;border-radius:12px;
-                        padding:16px 24px;margin:12px 0;text-align:center;">
-                <p style="margin:0;color:#555;font-size:0.9rem;">
-                    Taxable ₹{grand_taxable:.2f} &nbsp;+&nbsp;
-                    CGST ₹{grand_cgst:.2f} &nbsp;+&nbsp;
-                    SGST ₹{grand_sgst:.2f}
-                </p>
-                <h1 style="margin:4px 0 0 0;color:#1a3c5e;font-size:2.2rem;">
-                    TOTAL &nbsp; ₹ {grand_total:.2f}
-                </h1>
+            <div class="receipt-container">
+                <div class="receipt-header">
+                    <span class="receipt-title">Invoice Summary</span>
+                </div>
+                <div class="receipt-row" style="margin-top: 12px;">
+                    <span>Taxable Value</span>
+                    <span>₹ {grand_taxable:,.2f}</span>
+                </div>
+                <div class="receipt-row">
+                    <span>CGST Amount</span>
+                    <span>₹ {grand_cgst:,.2f}</span>
+                </div>
+                <div class="receipt-row">
+                    <span>SGST Amount</span>
+                    <span>₹ {grand_sgst:,.2f}</span>
+                </div>
+                <div class="receipt-total-row">
+                    <span class="receipt-total-label">Grand Total (GST Incl.)</span>
+                    <span class="receipt-total-value">₹ {grand_total:,.2f}</span>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown("""
-        <div style="background:#e8f5e9;border-radius:12px;padding:14px 22px;margin-bottom:12px;">
-            <h2 style="color:#1b5e20;margin:0;font-size:1.3rem;">🖨️ Step 3 — Generate Bill</h2>
-            <p style="color:#555;margin:4px 0 0 0;font-size:0.85rem;">
-                Optional: enter customer name below. Then press the green button.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        render_step_header("3", "Generate Invoice", "Specify optional customer details and finalize sale details to download PDF.")
 
         cust_name_input = st.text_input("Customer Name (optional)", value=st.session_state.bill_cust_name, placeholder="Leave empty for Cash Sale")
         if cust_name_input:
