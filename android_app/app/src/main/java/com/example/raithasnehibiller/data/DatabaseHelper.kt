@@ -9,7 +9,43 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+import java.io.FileOutputStream
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
+
+class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+
+    init {
+        if (!databaseExists()) {
+            try {
+                copyDatabase()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun databaseExists(): Boolean {
+        val dbFile = context.getDatabasePath(DATABASE_NAME)
+        return dbFile.exists()
+    }
+
+    private fun copyDatabase() {
+        val dbFile = context.getDatabasePath(DATABASE_NAME)
+        dbFile.parentFile?.mkdirs()
+
+        context.assets.open(DATABASE_NAME).use { inputStream ->
+            FileOutputStream(dbFile).use { outputStream ->
+                val buffer = ByteArray(1024)
+                var length: Int
+                while (inputStream.read(buffer).also { length = it } > 0) {
+                    outputStream.write(buffer, 0, length)
+                }
+                outputStream.flush()
+            }
+        }
+    }
 
     companion object {
         private const val DATABASE_NAME = "raitha_snehi_offline.db"
