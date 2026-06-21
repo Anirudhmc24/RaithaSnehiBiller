@@ -160,7 +160,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             put(KEY_MRP, mrp)
         }
         db.update(TABLE_INVENTORY, cv, "$KEY_ID = ?", arrayOf(id.toString()))
-        db.execSQL("UPDATE $TABLE_INVENTORY SET $KEY_QUANTITY = $KEY_QUANTITY + ? WHERE $KEY_ID = ?", arrayOf(qty, id))
+        db.execSQL("UPDATE $TABLE_INVENTORY SET $KEY_QUANTITY = $KEY_QUANTITY + ? WHERE $KEY_ID = ?", arrayOf<Any>(qty, id))
         return true
     }
 
@@ -277,7 +277,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 db.insert(TABLE_INVOICE_ITEMS, null, itemCv)
 
                 // Deduct inventory stock
-                db.execSQL("UPDATE $TABLE_INVENTORY SET $KEY_QUANTITY = $KEY_QUANTITY - ? WHERE $KEY_ID = ?", arrayOf(qty, productId))
+                db.execSQL("UPDATE $TABLE_INVENTORY SET $KEY_QUANTITY = $KEY_QUANTITY - ? WHERE $KEY_ID = ?", arrayOf<Any>(qty, productId))
             }
             db.setTransactionSuccessful()
             return true
